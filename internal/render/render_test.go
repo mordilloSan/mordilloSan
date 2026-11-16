@@ -101,6 +101,24 @@ func TestReadmeLinksEveryRepository(t *testing.T) {
 	}
 }
 
+func TestHeroGrowsForATwoLineTagline(t *testing.T) {
+	p := sampleProfile()
+	l := profile.Select(p.Repos, "", 4)
+	one := Build(p, l, "A tagline.").Hero.H
+	for name, tagline := range map[string]string{
+		"line break":      "First line.\nSecond line.",
+		"too wide to fit": strings.Repeat("A tagline that runs on. ", 6),
+	} {
+		hero := Build(p, l, tagline).Hero
+		if hero.H != one+21 {
+			t.Errorf("%s: hero height = %v, want one more line (%v)", name, hero.H, one+21)
+		}
+		if strings.Contains(hero.Alt, "\n") {
+			t.Errorf("%s: alt text keeps the line break: %q", name, hero.Alt)
+		}
+	}
+}
+
 func TestComma(t *testing.T) {
 	for in, want := range map[int]string{0: "0", 999: "999", 1000: "1,000", 2813: "2,813", 1234567: "1,234,567"} {
 		if got := comma(in); got != want {

@@ -48,41 +48,50 @@ func Build(p profile.Profile, l profile.Layout, tagline string) Page {
 
 func hero(p profile.Profile, l profile.Layout, tagline string) Piece {
 	const left, right = 28.0, pageW - 28.0
-	c := newCanvas(pageW, 358)
-	c.tile(14, "bg")
 
 	weeks := 52
 	totals := profile.WeeklyTotals(p.Repos, weeks)
 	active := profile.ActiveWeeks(totals)
 
-	c.text(text.Mono, "GITHUB.COM/"+upper(p.Login), left, 40, 10.5, 0.7, "m")
-
+	// Place the figures first, from the right: the name and tagline have to
+	// stay clear of them, and the tagline's line count sets the height.
 	type stat struct{ num, sub, l1, l2 string }
 	stats := []stat{
 		{comma(p.Contributions), "", "CONTRIBUTIONS", "IN 12 MONTHS"},
 		{fmt.Sprint(active), fmt.Sprintf("/ %d", weeks), "WEEKS WITH", "A COMMIT"},
 		{fmt.Sprint(len(p.Repos)), "", "PUBLIC", "REPOS"},
 	}
+	xs := make([]float64, len(stats))
 	edge := right
 	for i := len(stats) - 1; i >= 0; i-- {
 		s := stats[i]
-		nw := text.Display.Width(s.num, 34, -0.5)
-		full := nw
+		full := text.Display.Width(s.num, 34, -0.5)
 		if s.sub != "" {
 			full += 5 + text.Display.Width(s.sub, 17, 0)
 		}
-		w := max(full, text.Mono.Width(s.l1, 10, 0.6), text.Mono.Width(s.l2, 10, 0.6))
-		x := edge - w
-		c.text(text.Display, s.num, x, 96, 34, -0.5, "t")
-		c.text(text.Display, s.sub, x+nw+5, 96, 17, 0, "m")
-		c.text(text.Mono, s.l1, x, 113, 10, 0.6, "m")
-		c.text(text.Mono, s.l2, x, 126, 10, 0.6, "m")
-		edge = x - 30
+		xs[i] = edge - max(full, text.Mono.Width(s.l1, 10, 0.6), text.Mono.Width(s.l2, 10, 0.6))
+		edge = xs[i] - 30
 	}
-	// Keep a long name clear of the figures.
+	// Up to two tagline lines; a line break in config.json picks where the
+	// second starts. A second line pushes everything below it down.
+	const tagLead = 21.0
+	tag := text.Sans.Wrap(tagline, 15, edge-left, 2)
+	dy := tagLead * float64(max(len(tag)-1, 0))
+
+	c := newCanvas(pageW, 358+dy)
+	c.tile(14, "bg")
+	c.text(text.Mono, "GITHUB.COM/"+upper(p.Login), left, 40, 10.5, 0.7, "m")
+	for i, s := range stats {
+		nw := c.text(text.Display, s.num, xs[i], 96, 34, -0.5, "t")
+		c.text(text.Display, s.sub, xs[i]+nw+5, 96, 17, 0, "m")
+		c.text(text.Mono, s.l1, xs[i], 113, 10, 0.6, "m")
+		c.text(text.Mono, s.l2, xs[i], 126, 10, 0.6, "m")
+	}
 	nameSize := shrink(text.Display, p.Name, 68, 30, (edge-left)/0.94)
 	c.text(text.Display, p.Name, left-2, 106, nameSize, -nameSize*0.03, "t")
-	c.text(text.Sans, text.Sans.Fit(tagline, 15, 0, right-left), left, 142, 15, 0, "m")
+	for i, line := range tag {
+		c.text(text.Sans, line, left, 142+tagLead*float64(i), 15, 0, "m")
+	}
 
 	// Year graph: one column of blocks per week, the featured repository in
 	// the accent colour and everything else stacked on top.
@@ -95,21 +104,22 @@ func hero(p profile.Profile, l profile.Layout, tagline string) Piece {
 	if unit == 1 {
 		caption = fmt.Sprintf("COMMITS PER WEEK · LAST %d WEEKS · ONE BLOCK IS ONE COMMIT", weeks)
 	}
-	c.text(text.Mono, caption, left, 178, 10, 0.6, "m")
+	c.text(text.Mono, caption, left, 178+dy, 10, 0.6, "m")
 
 	var featured []int
 	if l.Feature != nil {
 		featured = l.Feature.Weekly
 		lx := right - text.Mono.Width("EVERYTHING ELSE", 10, 0.6)
-		c.text(text.Mono, "EVERYTHING ELSE", lx, 178, 10, 0.6, "m")
-		c.rect(lx-15, 171, 9, 5, "o")
+		c.text(text.Mono, "EVERYTHING ELSE", lx, 178+dy, 10, 0.6, "m")
+		c.rect(lx-15, 171+dy, 9, 5, "o")
 		name := upper(l.Feature.Name)
 		lx -= 15 + 18 + text.Mono.Width(name, 10, 0.6)
-		c.text(text.Mono, name, lx, 178, 10, 0.6, "m")
-		c.rect(lx-15, 171, 9, 5, "a")
+		c.text(text.Mono, name, lx, 178+dy, 10, 0.6, "m")
+		c.rect(lx-15, 171+dy, 9, 5, "a")
 	}
 
-	const base, pitch = 318.0, 7.0
+	const pitch = 7.0
+	base := 318 + dy
 	step := (right - left) / float64(weeks)
 	var main, rest strings.Builder
 	for k, tot := range totals {
@@ -143,14 +153,14 @@ func hero(p profile.Profile, l profile.Layout, tagline string) Piece {
 		start := sunday.AddDate(0, 0, -7*(weeks-1-k))
 		x := left + step*float64(k)
 		if start.Month() != lastMonth && x-lastX >= 30 {
-			c.text(text.Mono, upper(start.Format("Jan")), x, 341, 10, 0.6, "m")
+			c.text(text.Mono, upper(start.Format("Jan")), x, 341+dy, 10, 0.6, "m")
 			lastX = x
 		}
 		lastMonth = start.Month()
 	}
 
 	alt := fmt.Sprintf("%s. %s %s contributions in the last 12 months, commits in %d of the last %d weeks, %s.",
-		p.Name, tagline, comma(p.Contributions), active, weeks, plural(len(p.Repos), "public repo", "public repos"))
+		p.Name, strings.Join(strings.Fields(tagline), " "), comma(p.Contributions), active, weeks, plural(len(p.Repos), "public repo", "public repos"))
 	return c.piece("hero.svg", alt, "")
 }
 

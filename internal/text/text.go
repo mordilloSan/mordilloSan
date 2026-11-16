@@ -141,30 +141,31 @@ func (f *Face) Fit(s string, size, tracking, maxW float64) string {
 	return ""
 }
 
-// Wrap breaks s into at most maxLines lines no wider than maxW. Text that
-// does not fit ends with an ellipsis.
+// Wrap breaks s into at most maxLines lines no wider than maxW. A newline in
+// s starts a new line. Text that does not fit ends with an ellipsis.
 func (f *Face) Wrap(s string, size, maxW float64, maxLines int) []string {
-	words := strings.Fields(s)
 	var lines []string
-	cur := ""
-	for i, w := range words {
-		next := w
+	for para := range strings.SplitSeq(s, "\n") {
+		cur := ""
+		for w := range strings.FieldsSeq(para) {
+			if next := cur + " " + w; cur != "" && f.Width(next, size, 0) <= maxW {
+				cur = next
+				continue
+			}
+			if cur != "" {
+				lines = append(lines, cur)
+			}
+			cur = w
+		}
 		if cur != "" {
-			next = cur + " " + w
+			lines = append(lines, cur)
 		}
-		if cur == "" || f.Width(next, size, 0) <= maxW {
-			cur = next
-			continue
-		}
-		if len(lines) == maxLines-1 {
-			rest := cur + " " + strings.Join(words[i:], " ")
-			return append(lines, f.Fit(rest, size, 0, maxW))
-		}
-		lines = append(lines, cur)
-		cur = w
 	}
-	if cur != "" {
-		lines = append(lines, f.Fit(cur, size, 0, maxW))
+	if maxLines > 0 && len(lines) > maxLines {
+		lines = append(lines[:maxLines-1], strings.Join(lines[maxLines-1:], " "))
+	}
+	for i, l := range lines {
+		lines[i] = f.Fit(l, size, 0, maxW)
 	}
 	return lines
 }
