@@ -10,8 +10,9 @@ import (
 	"github.com/mordilloSan/mordilloSan/internal/text"
 )
 
-// Design widths. The README shows the hero and table at 100%, the feature
-// card at 40% and the small cards at 28%, so all pieces share one scale.
+// Design widths. The README shows the hero and table at 100% and the feature
+// card and small cards at 37.5% and 26.25%: the same 340:238 ratio, a little
+// under design scale so the block still fits beside the float on a phone.
 const (
 	pageW    = 850.0
 	featureW = 340.0
@@ -28,11 +29,12 @@ type Page struct {
 	Cards   []Piece
 	Head    Piece
 	Rows    []Piece
+	Foot    Piece
 }
 
 // Build draws the whole page.
 func Build(p profile.Profile, l profile.Layout, tagline string) Page {
-	pg := Page{Hero: hero(p, l, tagline), Head: tableHead(len(l.Table))}
+	pg := Page{Hero: hero(p, l, tagline), Head: tableHead(len(l.Table)), Foot: footer()}
 	if l.Feature != nil {
 		f := feature(*l.Feature)
 		pg.Feature = &f
@@ -275,6 +277,14 @@ func tableHead(count int) Piece {
 	c.textR(text.Mono, "COMMITS", colCommits, y, 9.5, 0.6, "m")
 	c.textR(text.Mono, "STARS", colStars, y, 9.5, 0.6, "m")
 	return c.piece("table-head.svg", "", "")
+}
+
+// footer is the closing note, set like every other small label on the page.
+func footer() Piece {
+	const note = "Refreshed daily. Each card's chart is drawn to that repository's own scale."
+	c := newCanvas(pageW, 26)
+	c.text(text.Mono, upper(strings.ReplaceAll(strings.TrimSuffix(note, "."), ". ", " · ")), 2, 17, 8.5, 0.6, "m")
+	return c.piece("footer.svg", note, "")
 }
 
 func tableRow(r profile.Repo, i int) Piece {

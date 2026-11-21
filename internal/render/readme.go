@@ -23,11 +23,14 @@ func (pg Page) Readme(dir string) string {
 
 	// The feature card floats left and the small cards flow beside it, two
 	// to a row. Widths are percentages so the block scales with the page.
+	// GitHub adds a fixed 20px of padding to the floated image and the
+	// space between two cards is fixed too, so the percentages leave 10%
+	// spare: enough for a row to hold together down to a 280px page.
 	if pg.Feature != nil {
-		b.WriteString(img(*pg.Feature, `align="left" width="40%"`) + "\n")
+		b.WriteString(img(*pg.Feature, `align="left" width="37.5%"`) + "\n")
 	}
 	for i, c := range pg.Cards {
-		b.WriteString(img(c, `width="28%"`))
+		b.WriteString(img(c, `width="26.25%"`))
 		if i%2 == 0 && i+1 < len(pg.Cards) {
 			b.WriteString(" ")
 		} else {
@@ -43,7 +46,7 @@ func (pg Page) Readme(dir string) string {
 	for _, r := range pg.Rows {
 		b.WriteString(img(r, `width="100%"`) + "\n")
 	}
-	b.WriteString("\n<sub>Refreshed daily. Each card's chart is drawn to that repository's own scale.</sub>\n")
+	b.WriteString(img(pg.Foot, `width="100%"`) + "\n")
 	return b.String()
 }
 
@@ -83,6 +86,8 @@ func (pg Page) Sheet(th Theme, m Mode) string {
 		place(r, margin, y)
 		y += r.H + gap
 	}
+	place(pg.Foot, margin, y)
+	y += pg.Foot.H
 	h := y + margin
 	w := pageW + 2*margin
 	return fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %s %s" width="%s" height="%s">%s<rect width="100%%" height="100%%" fill="%s"/>%s</svg>`+"\n",
@@ -97,5 +102,6 @@ func (pg Page) All() []Piece {
 	}
 	out = append(out, pg.Cards...)
 	out = append(out, pg.Head)
-	return append(out, pg.Rows...)
+	out = append(out, pg.Rows...)
+	return append(out, pg.Foot)
 }
