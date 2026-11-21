@@ -73,9 +73,20 @@ func (c *canvas) piece(file, alt, link string) Piece {
 	return Piece{File: file, W: c.w, H: c.h, Alt: alt, Link: link, body: c.sb.String()}
 }
 
-// tile draws the rounded background panel.
-func (c *canvas) tile(rx float64, class string) {
-	fmt.Fprintf(&c.sb, `<rect class="%s" x=".5" y=".5" width="%s" height="%s" rx="%s"/>`, class, n(c.w-1), n(c.h-1), n(rx))
+// slice returns the band of p that starts at y and is h tall, as its own
+// image. Stacked in order, the slices show p again.
+func (p Piece) slice(file, alt string, y, h float64) Piece {
+	p.File, p.Alt, p.H = file, alt, h
+	p.body = fmt.Sprintf(`<g transform="translate(0 %s)">%s</g>`, n(-y), p.body)
+	return p
+}
+
+// tile draws the rounded background panel over the whole canvas.
+func (c *canvas) tile(rx float64, class string) { c.box(0, 0, c.w, c.h, rx, class) }
+
+// box draws a rounded panel that fills the given area.
+func (c *canvas) box(x, y, w, h, rx float64, class string) {
+	fmt.Fprintf(&c.sb, `<rect class="%s" x="%s" y="%s" width="%s" height="%s" rx="%s"/>`, class, n(x+.5), n(y+.5), n(w-1), n(h-1), n(rx))
 }
 
 // text draws s with its baseline starting at (x, y) and returns its width.

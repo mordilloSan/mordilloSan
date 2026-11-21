@@ -10,22 +10,27 @@ import (
 	"github.com/mordilloSan/mordilloSan/internal/text"
 )
 
-// Design widths. The README shows the hero and table at 100% and the feature
-// card and small cards at 37.5% and 26.25%: the same 340:238 ratio, a little
-// under design scale so the block still fits beside the float on a phone.
+// Design widths. The README shows the hero and table at 100%, the feature
+// card at 44% and each small card at 28%, so all pieces share one scale and
+// a row of feature plus two cards fills the page exactly.
+//
+// The README cannot space images itself, so the gaps are drawn into the
+// card images: cardW and cardH are the tile, cardGap the clear margin on
+// its left and below it.
 const (
 	pageW    = 850.0
-	featureW = 340.0
-	cardW    = 238.0
+	featureW = 374.0
+	cardGap  = 6.0
+	cardW    = 232.0
 	cardH    = 172.0
-	featureH = 2*cardH + 6
+	featureH = 2*cardH + cardGap
 	rows     = 17 // tallest column of the year graph, in blocks
 )
 
 // Page is every image of the profile page.
 type Page struct {
 	Hero    Piece
-	Feature *Piece
+	Feature []Piece // the feature card, cut into one slice per row of cards
 	Cards   []Piece
 	Head    Piece
 	Rows    []Piece
@@ -37,7 +42,10 @@ func Build(p profile.Profile, l profile.Layout, tagline string) Page {
 	pg := Page{Hero: hero(p, l, tagline), Head: tableHead(len(l.Table)), Foot: footer()}
 	if l.Feature != nil {
 		f := feature(*l.Feature)
-		pg.Feature = &f
+		pg.Feature = []Piece{
+			f.slice("feature-1.svg", f.Alt, 0, cardH+cardGap),
+			f.slice("feature-2.svg", l.Feature.Name+": commits per week over the last year.", cardH+cardGap, cardH),
+		}
 	}
 	for i, r := range l.Cards {
 		pg.Cards = append(pg.Cards, card(r, i+1))
@@ -200,6 +208,8 @@ func (c *canvas) title(r profile.Repo, left, right, y, size, floor, starSize, la
 	c.stars(r.Stars, left+w, y, starSize)
 }
 
+// feature draws the whole feature card. Nothing but the tile may cross
+// y = cardH+cardGap, where Build cuts it into its two slices.
 func feature(r profile.Repo) Piece {
 	const left, right = 18.0, featureW - 18.0
 	c := newCanvas(featureW, featureH)
@@ -222,21 +232,21 @@ func feature(r profile.Repo) Piece {
 		if x+w > right {
 			break
 		}
-		c.text(text.Display, s.num, x, 178, 21, -0.3, "t")
-		c.text(text.Mono, s.label, x, 193, 9.5, 0.6, "m")
-		x += w + 20
+		c.text(text.Display, s.num, x, 204, 21, -0.3, "t")
+		c.text(text.Mono, s.label, x, 219, 9.5, 0.6, "m")
+		x += w + 24
 	}
 
 	year := r.YearCommits()
-	c.text(text.Mono, fmt.Sprintf("LAST %d WEEKS · %s COMMITS", len(r.Weekly), comma(year)), left, 228, 10, 0.6, "m")
-	c.bars(r.Weekly, left, right-left, featureH-20, 84, 3.6)
+	c.text(text.Mono, fmt.Sprintf("LAST %d WEEKS · %s COMMITS", len(r.Weekly), comma(year)), left, 250, 10, 0.6, "m")
+	c.bars(r.Weekly, left, right-left, featureH-20, 66, 3.8)
 	return c.piece("feature.svg", repoAlt(r), r.URL)
 }
 
 func card(r profile.Repo, i int) Piece {
-	const left, right = 14.0, cardW - 14.0
-	c := newCanvas(cardW, cardH)
-	c.tile(12, "bg")
+	const left, right = cardGap + 14.0, cardGap + cardW - 14.0
+	c := newCanvas(cardGap+cardW, cardH+cardGap)
+	c.box(cardGap, 0, cardW, cardH, 12, "bg")
 	c.title(r, left, right, 30, 14, 10, 11, 9.5)
 	c.text(text.Mono, upper(plural(r.Commits, "commit", "commits")), left, 47, 9.5, 0.6, "m")
 

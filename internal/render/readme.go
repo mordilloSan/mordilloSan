@@ -21,26 +21,23 @@ func (pg Page) Readme(dir string) string {
 
 	b.WriteString(img(pg.Hero, `width="100%"`) + "\n\n")
 
-	// The feature card floats left and the small cards flow beside it, two
-	// to a row. Widths are percentages so the block scales with the page.
-	// GitHub adds a fixed 20px of padding to the floated image and the
-	// space between two cards is fixed too, so the percentages leave 10%
-	// spare: enough for a row to hold together down to a 280px page.
-	if pg.Feature != nil {
-		b.WriteString(img(*pg.Feature, `align="left" width="37.5%"`) + "\n")
-	}
-	for i, c := range pg.Cards {
-		b.WriteString(img(c, `width="26.25%"`))
-		if i%2 == 0 && i+1 < len(pg.Cards) {
-			b.WriteString(" ")
-		} else {
-			b.WriteString("\n")
+	// Each row is a slice of the feature card and two small cards, with
+	// nothing between the tags, so the widths add up to the whole page at
+	// any size. align="top" takes the images off the text baseline, which
+	// would otherwise leave a strip under each row and show the cut in the
+	// feature card.
+	for row := 0; row < max(len(pg.Feature), (len(pg.Cards)+1)/2); row++ {
+		if row > 0 {
+			b.WriteString("<br>\n")
+		}
+		if row < len(pg.Feature) {
+			b.WriteString(img(pg.Feature[row], `align="top" width="44%"`))
+		}
+		for _, c := range pg.Cards[min(2*row, len(pg.Cards)):min(2*row+2, len(pg.Cards))] {
+			b.WriteString(img(c, `align="top" width="28%"`))
 		}
 	}
-	if pg.Feature != nil {
-		b.WriteString(`<br clear="left">` + "\n")
-	}
-	b.WriteString("\n")
+	b.WriteString("\n\n")
 
 	b.WriteString(img(pg.Head, `width="100%"`) + "\n")
 	for _, r := range pg.Rows {
@@ -67,18 +64,18 @@ func (pg Page) Sheet(th Theme, m Mode) string {
 	place(pg.Hero, margin, y)
 	y += pg.Hero.H + 16
 
-	blockH := 0.0
-	if pg.Feature != nil {
-		place(*pg.Feature, margin, y)
-		blockH = pg.Feature.H
+	blockH, cardsX := 0.0, margin
+	for _, f := range pg.Feature {
+		place(f, margin, y+blockH)
+		blockH += f.H
+		cardsX = margin + f.W
 	}
 	for i, c := range pg.Cards {
-		cx := margin + featureW + 20 + float64(i%2)*(cardW+4)
-		cy := y + float64(i/2)*(cardH+gap)
-		place(c, cx, cy)
-		blockH = max(blockH, cy+cardH-y)
+		cy := y + float64(i/2)*c.H
+		place(c, cardsX+float64(i%2)*c.W, cy)
+		blockH = max(blockH, cy+c.H-y)
 	}
-	y += blockH + 16
+	y += blockH + 10
 
 	place(pg.Head, margin, y)
 	y += pg.Head.H + gap
@@ -97,9 +94,7 @@ func (pg Page) Sheet(th Theme, m Mode) string {
 // All returns every piece in page order.
 func (pg Page) All() []Piece {
 	out := []Piece{pg.Hero}
-	if pg.Feature != nil {
-		out = append(out, *pg.Feature)
-	}
+	out = append(out, pg.Feature...)
 	out = append(out, pg.Cards...)
 	out = append(out, pg.Head)
 	out = append(out, pg.Rows...)

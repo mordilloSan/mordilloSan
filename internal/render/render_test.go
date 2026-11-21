@@ -72,7 +72,7 @@ func TestEveryPieceIsWellFormedSVG(t *testing.T) {
 
 func TestPageHasOnePieceForEachSlot(t *testing.T) {
 	pg, l := build(t)
-	if pg.Feature == nil || pg.Feature.Link != "https://github.com/someone/big" {
+	if len(pg.Feature) != 2 || pg.Feature[0].Link != "https://github.com/someone/big" {
 		t.Fatalf("feature = %+v, want the big repo", pg.Feature)
 	}
 	if len(pg.Cards) != len(l.Cards) {
