@@ -291,7 +291,7 @@ func tableHead(count int) Piece {
 
 // footer is the closing note, set like every other small label on the page.
 func footer() Piece {
-	const note = "Refreshed daily. Each card's chart is drawn to that repository's own scale."
+	const note = "Refreshed every six hours. Each card's chart is drawn to that repository's own scale."
 	c := newCanvas(pageW, 26)
 	c.text(text.Mono, upper(strings.ReplaceAll(strings.TrimSuffix(note, "."), ". ", " · ")), 2, 17, 8.5, 0.6, "m")
 	return c.piece("footer.svg", note, "")

@@ -3,6 +3,8 @@
 package render
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"html"
 	"strconv"
@@ -60,6 +62,15 @@ func style(th Theme, m Mode) string {
 func (p Piece) SVG(th Theme, m Mode) string {
 	return fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %s %s" width="%s" height="%s" role="img" aria-label="%s">%s%s</svg>`+"\n",
 		n(p.W), n(p.H), n(p.W), n(p.H), html.EscapeString(p.Alt), style(th, m), p.body)
+}
+
+// FileName is the name the piece is published under: File with a short hash
+// of the image in it. Browsers keep GitHub's images for a few minutes, and
+// GitHub's raw links drop query strings, so a changed image needs a new name
+// or a reload mixes old rows with new ones.
+func (p Piece) FileName(th Theme) string {
+	sum := sha256.Sum256([]byte(p.SVG(th, ModeAuto)))
+	return strings.TrimSuffix(p.File, ".svg") + "." + hex.EncodeToString(sum[:4]) + ".svg"
 }
 
 type canvas struct {

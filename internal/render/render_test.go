@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -85,19 +86,45 @@ func TestPageHasOnePieceForEachSlot(t *testing.T) {
 
 func TestReadmeLinksEveryRepository(t *testing.T) {
 	pg, l := build(t)
-	readme := pg.Readme("assets")
+	th := Theme{Accent: "#ff8a3d", AccentLight: "#c2540a"}
+	readme := pg.Readme("assets", th)
 	for _, r := range l.Table {
 		if !strings.Contains(readme, `<a href="`+r.URL+`">`) {
 			t.Errorf("README has no link to %s", r.Name)
 		}
 	}
 	for _, p := range pg.All() {
-		if !strings.Contains(readme, `src="assets/`+p.File+`"`) {
-			t.Errorf("README does not show %s", p.File)
+		if !strings.Contains(readme, `src="assets/`+p.FileName(th)+`"`) {
+			t.Errorf("README does not show %s", p.FileName(th))
 		}
 	}
 	if strings.Contains(readme, `"odd"`) {
 		t.Error("README alt text is not escaped")
+	}
+}
+
+// A browser keeps an image for a few minutes, so a row that now shows a
+// different repository has to be published under a new name, or the page
+// shows the old row next to the new ones.
+func TestImageNamesFollowTheirContent(t *testing.T) {
+	pg, _ := build(t)
+	th := Theme{Accent: "#ff8a3d", AccentLight: "#c2540a"}
+	row := pg.Rows[0]
+	name := row.FileName(th)
+	want := regexp.MustCompile(`^` + regexp.QuoteMeta(strings.TrimSuffix(row.File, ".svg")) + `\.[0-9a-f]{8}\.svg$`)
+	if !want.MatchString(name) {
+		t.Errorf("FileName = %q, want %s", name, want)
+	}
+	if again := row.FileName(th); again != name {
+		t.Errorf("FileName is not stable: %q then %q", name, again)
+	}
+	changed := row
+	changed.Alt += " 1 star."
+	if changed.FileName(th) == name {
+		t.Error("FileName did not change with the image")
+	}
+	if row.FileName(Theme{Accent: "#000000", AccentLight: "#ffffff"}) == name {
+		t.Error("FileName did not change with the theme")
 	}
 }
 

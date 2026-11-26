@@ -2,8 +2,10 @@ name: Update profile
 
 on:
   schedule:
-    # Once a day. The minute is arbitrary, to stay off the top-of-hour rush.
-    - cron: "17 5 * * *"
+    # Every six hours, so a new repository shows up the same day even when
+    # GitHub starts scheduled runs hours late. The minute is arbitrary, to
+    # stay off the top-of-hour rush.
+    - cron: "17 */6 * * *"
   workflow_dispatch:
   push:
     branches: [main]

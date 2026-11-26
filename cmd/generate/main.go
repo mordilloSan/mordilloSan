@@ -115,11 +115,11 @@ func run() error {
 		}
 	}
 	for _, piece := range page.All() {
-		if err := os.WriteFile(filepath.Join(assets, piece.File), []byte(piece.SVG(theme, render.ModeAuto)), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(assets, piece.FileName(theme)), []byte(piece.SVG(theme, render.ModeAuto)), 0o644); err != nil {
 			return err
 		}
 	}
-	if err := os.WriteFile(filepath.Join(*out, "README.md"), []byte(page.Readme("assets")), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(*out, "README.md"), []byte(page.Readme("assets", theme)), 0o644); err != nil {
 		return err
 	}
 
